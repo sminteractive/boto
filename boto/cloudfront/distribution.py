@@ -587,7 +587,7 @@ class Distribution(object):
         signed_url = url + sep + "&".join(signed_url_params)
         return signed_url
 
-    def _create_signing_params(self, url, keypair_id, signature_library
+    def _create_signing_params(self, url, keypair_id, signature_library,
                           expire_time=None, valid_after_time=None,
                           ip_address=None, policy_url=None,
                           private_key_file=None, private_key_string=None):
