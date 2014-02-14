@@ -508,7 +508,8 @@ class Distribution(object):
     def create_signed_url(self, url, keypair_id,
                           expire_time=None, valid_after_time=None,
                           ip_address=None, policy_url=None,
-                          private_key_file=None, private_key_string=None):
+                          private_key_file=None, private_key_string=None,
+                          signature_library='rsa'):
         """
         Creates a signed CloudFront URL that is only valid within the specified
         parameters.
@@ -557,14 +558,20 @@ class Distribution(object):
             used for signing. Only one of private_key_file or
             private_key_string can be provided.
 
+        :type signature_library: str
+        :param signature_library: The library used to sign a boto URL.
+            The value can be 'rsa' or 'pycrypto'.
+
         :rtype: str
         :return: The signed URL.
         """
         # Get the required parameters
         params = self._create_signing_params(
-                     url=url, keypair_id=keypair_id, expire_time=expire_time,
-                     valid_after_time=valid_after_time, ip_address=ip_address,
-                     policy_url=policy_url, private_key_file=private_key_file,
+                     url=url, keypair_id=keypair_id,
+                     signature_library=signature_library,
+                     expire_time=expire_time, valid_after_time=valid_after_time,
+                     ip_address=ip_address, policy_url=policy_url,
+                     private_key_file=private_key_file,
                      private_key_string=private_key_string)
 
         #combine these into a full url
@@ -580,7 +587,7 @@ class Distribution(object):
         signed_url = url + sep + "&".join(signed_url_params)
         return signed_url
 
-    def _create_signing_params(self, url, keypair_id,
+    def _create_signing_params(self, url, keypair_id, signature_library
                           expire_time=None, valid_after_time=None,
                           ip_address=None, policy_url=None,
                           private_key_file=None, private_key_string=None):
@@ -606,7 +613,7 @@ class Distribution(object):
             encoded_policy = self._url_base64_encode(policy)
             params["Policy"] = encoded_policy
         #sign the policy
-        signature = self._sign_string(policy, private_key_file, private_key_string)
+        signature = self._sign_string(policy, private_key_file, private_key_string, signature_library)
         #now base64 encode the signature (URL safe as well)
         encoded_signature = self._url_base64_encode(signature)
         params["Signature"] = encoded_signature
@@ -647,17 +654,32 @@ class Distribution(object):
         return json.dumps(policy, separators=(",", ":"))
 
     @staticmethod
-    def _sign_string(message, private_key_file=None, private_key_string=None):
+    def _sign_string(message, private_key_file=None, private_key_string=None, signature_library):
         """
         Signs a string for use with Amazon CloudFront.
         Requires the rsa library be installed.
         """
-        try:
-            import rsa
-        except ImportError:
-            raise NotImplementedError("Boto depends on the python rsa "
-                                      "library to generate signed URLs for "
-                                      "CloudFront")
+        if signature_library == 'rsa':
+            try:
+                import rsa
+            except ImportError:
+                raise NotImplementedError("Boto depends on the python rsa "
+                                          "library to generate signed URLs for "
+                                          "CloudFront")
+        elif signature_library == 'pycrypto':
+            try:
+                import Crypto.Hash.SHA
+                import Crypto.PublicKey.RSA
+                import Crypto.Signature.PKCS1_v1_5
+            except Exception as e:
+                raise NotImplementedError("Boto depends on the python PyCrypto "
+                                          "library to generate signed URLs for "
+                                          "CloudFront")
+        else:
+            raise ValueError("{signature_library} is not a valid library to "
+                             "generate signed URLs for CloudFront".format(
+                                 signature_library=signature_library
+                             ))
         # Make sure only one of private_key_file and private_key_string is set
         if private_key_file and private_key_string:
             raise ValueError("Only specify the private_key_file or the private_key_string not both")
@@ -673,8 +695,16 @@ class Distribution(object):
                 private_key_string = private_key_file.read()
 
         # Sign it!
-        private_key = rsa.PrivateKey.load_pkcs1(private_key_string)
-        signature = rsa.sign(str(message), private_key, 'SHA-1')
+        if signature_library == 'rsa':
+            private_key = rsa.PrivateKey.load_pkcs1(private_key_string)
+            signature = rsa.sign(str(message), private_key, 'SHA-1')
+        elif signature_library == 'pycrypto':
+            key = Crypto.PublicKey.RSA.importKey(private_key_string)
+            signer = Crypto.Signature.PKCS1_v1_5.new(key)
+            sha1_hash = Crypto.Hash.SHA.new()
+            sha1_hash.update(bytes(str(message)))
+            signature = signer.sign(sha1_hash)
+
         return signature
 
     @staticmethod
