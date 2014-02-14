@@ -613,7 +613,7 @@ class Distribution(object):
             encoded_policy = self._url_base64_encode(policy)
             params["Policy"] = encoded_policy
         #sign the policy
-        signature = self._sign_string(policy, private_key_file, private_key_string, signature_library)
+        signature = self._sign_string(policy, signature_library, private_key_file, private_key_string)
         #now base64 encode the signature (URL safe as well)
         encoded_signature = self._url_base64_encode(signature)
         params["Signature"] = encoded_signature
@@ -654,7 +654,7 @@ class Distribution(object):
         return json.dumps(policy, separators=(",", ":"))
 
     @staticmethod
-    def _sign_string(message, private_key_file=None, private_key_string=None, signature_library):
+    def _sign_string(message, signature_library, private_key_file=None, private_key_string=None):
         """
         Signs a string for use with Amazon CloudFront.
         Requires the rsa library be installed.
