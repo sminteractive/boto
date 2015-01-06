@@ -62,6 +62,7 @@ At the moment, boto supports:
 * Application Services
 
   * Amazon CloudSearch (Python 3)
+  * Amazon CloudSearch Domain (Python 3)
   * Amazon Elastic Transcoder (Python 3)
   * Amazon Simple Workflow Service (SWF) (Python 3)
   * Amazon Simple Queue Service (SQS) (Python 3)
@@ -179,7 +180,7 @@ boto config file.  See `this`_ for details.
 .. _github.com: http://github.com/boto/boto
 .. _Online documentation: http://docs.pythonboto.org
 .. _Python Cheese Shop: http://pypi.python.org/pypi/boto
-.. _this: http://code.google.com/p/boto/wiki/BotoConfig
+.. _this: http://docs.pythonboto.org/en/latest/boto_config_tut.html
 .. _gitflow: http://nvie.com/posts/a-successful-git-branching-model/
 .. _neo: https://github.com/boto/boto/tree/neo
 .. _boto-users Google Group: https://groups.google.com/forum/?fromgroups#!forum/boto-users
