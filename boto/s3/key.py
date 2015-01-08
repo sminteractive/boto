@@ -938,7 +938,12 @@ class Key(object):
             if size is not None:
                 kwargs['size'] = size
             headers['_sha256'] = compute_hash(**kwargs)[0]
-        headers['Expect'] = '100-Continue'
+        # Temporary fix by JC Lanoe
+        # By commenting out this line, we prevent AWS S3 from returning a
+        # 100 Continue response, which may cause an error for clients that
+        # strictly implemented that part of the HTTP spec.
+        # More info here: https://github.com/boto/boto/issues/840
+        # headers['Expect'] = '100-Continue'
         headers = boto.utils.merge_meta(headers, self.metadata, provider)
         resp = self.bucket.connection.make_request(
             'PUT',
